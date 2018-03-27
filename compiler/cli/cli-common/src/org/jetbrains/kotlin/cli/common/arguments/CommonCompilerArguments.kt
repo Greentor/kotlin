@@ -230,7 +230,33 @@ abstract class CommonCompilerArguments : CommonToolArguments() {
                     if (!contains(it)) put(it, LanguageFeature.State.ENABLED)
                 }
             }
+
+            // Internal arguments should go last, because it may be useful to override
+            // some feature state via -XX (even if some -X flags was passed)
+            if (internalArguments.isNotEmpty()) {
+                configureLanguageFeaturesFromInternalArgs(collector)
+            }
         }
+
+    private fun HashMap<LanguageFeature, LanguageFeature.State>.configureLanguageFeaturesFromInternalArgs(collector: MessageCollector) {
+        val languageSettingsParser = LanguageSettingsParser()
+        val featuresThatForcePreReleaseBinaries = mutableListOf<LanguageFeature>()
+        internalArguments
+            .mapNotNull { languageSettingsParser.parseInternalArgument(it, collector) }
+            .forEach { (feature, state) ->
+                put(feature, state)
+                if (state == LanguageFeature.State.ENABLED_MANUALLY && feature.forcesPreReleaseBinariesIfEnabled()) {
+                    featuresThatForcePreReleaseBinaries += feature
+                }
+            }
+
+        if (featuresThatForcePreReleaseBinaries.isNotEmpty()) {
+            collector.report(
+                CompilerMessageSeverity.STRONG_WARNING,
+                "Manually enabled features ${featuresThatForcePreReleaseBinaries.joinToString()} will force generation of pre-release binaries"
+            )
+        }
+    }
 
     fun configureLanguageVersionSettings(collector: MessageCollector): LanguageVersionSettings {
 

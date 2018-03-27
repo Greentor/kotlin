@@ -14,6 +14,7 @@ enum class LanguageFeature(
     val sinceApiVersion: ApiVersion = ApiVersion.KOTLIN_1_0,
     val hintUrl: String? = null,
     val defaultState: State = State.ENABLED,
+    val advancesAbiVersion: Boolean = false,
     val enabledInProgressiveMode: Boolean = false
 ) {
     // Note: names of these entries are also used in diagnostic tests and in user-visible messages (see presentableText below)
@@ -64,15 +65,15 @@ enum class LanguageFeature(
     ProhibitInnerClassesOfGenericClassExtendingThrowable(KOTLIN_1_3, enabledInProgressiveMode = true),
     ProperVisibilityForCompanionObjectInstanceField(KOTLIN_1_3, enabledInProgressiveMode = true),
     ProperForInArrayLoopRangeVariableAssignmentSemantic(KOTLIN_1_3, enabledInProgressiveMode = true),
-    NestedClassesInAnnotations(KOTLIN_1_3),
-    JvmStaticInInterface(KOTLIN_1_3),
+    NestedClassesInAnnotations(KOTLIN_1_3, advancesAbiVersion = true),
+    JvmStaticInInterface(KOTLIN_1_3, advancesAbiVersion = true),
     ProhibitVisibilityOfNestedClassifiersFromSupertypesOfCompanion(KOTLIN_1_3, enabledInProgressiveMode = true),
     ProhibitNonConstValuesAsVarargsInAnnotations(KOTLIN_1_3, enabledInProgressiveMode = true),
-    ReleaseCoroutines(KOTLIN_1_3),
+    ReleaseCoroutines(KOTLIN_1_3, advancesAbiVersion = true),
     ReadDeserializedContracts(KOTLIN_1_3),
     UseReturnsEffect(KOTLIN_1_3),
     UseCallsInPlaceEffect(KOTLIN_1_3),
-    AllowContractsForCustomFunctions(KOTLIN_1_3),
+    AllowContractsForCustomFunctions(KOTLIN_1_3, advancesAbiVersion = true),
     ProhibitLocalAnnotations(KOTLIN_1_3, enabledInProgressiveMode = true),
 
     StrictJavaNullabilityAssertions(sinceVersion = null, defaultState = State.DISABLED),
@@ -90,7 +91,7 @@ enum class LanguageFeature(
 
     NewInference(sinceVersion = KOTLIN_1_3, defaultState = State.DISABLED),
 
-    InlineClasses(sinceVersion = null, defaultState = State.DISABLED),
+    InlineClasses(sinceVersion = null, defaultState = State.DISABLED, advancesAbiVersion = true),
 
     ;
 
@@ -103,6 +104,7 @@ enum class LanguageFeature(
     enum class State(override val description: String) : DescriptionAware {
         ENABLED("Enabled"),
         ENABLED_WITH_WARNING("Enabled with warning"),
+        ENABLED_MANUALLY("Enabled manually using -XX flags"),
         ENABLED_WITH_ERROR("Disabled"), // TODO: consider dropping this and using DISABLED instead
         DISABLED("Disabled");
     }
@@ -147,7 +149,13 @@ interface LanguageVersionSettings {
     fun getFeatureSupport(feature: LanguageFeature): LanguageFeature.State
 
     fun supportsFeature(feature: LanguageFeature): Boolean =
-        getFeatureSupport(feature).let { it == LanguageFeature.State.ENABLED || it == LanguageFeature.State.ENABLED_WITH_WARNING }
+        getFeatureSupport(feature).let {
+            it == LanguageFeature.State.ENABLED ||
+            it == LanguageFeature.State.ENABLED_WITH_WARNING ||
+            it == LanguageFeature.State.ENABLED_MANUALLY
+        }
+
+    fun isPreRelease(): Boolean
 
     fun <T> getFlag(flag: AnalysisFlag<T>): T
 
@@ -185,6 +193,7 @@ class LanguageVersionSettingsImpl @JvmOverloads constructor(
         specificFeatures.forEach { (feature, state) ->
             val char = when (state) {
                 LanguageFeature.State.ENABLED -> '+'
+                LanguageFeature.State.ENABLED_MANUALLY -> "+XX:"
                 LanguageFeature.State.ENABLED_WITH_WARNING -> '~'
                 LanguageFeature.State.ENABLED_WITH_ERROR, LanguageFeature.State.DISABLED -> '-'
             }
@@ -192,17 +201,24 @@ class LanguageVersionSettingsImpl @JvmOverloads constructor(
         }
     }
 
+    override fun isPreRelease(): Boolean = languageVersion.isPreRelease() ||
+            specificFeatures.any { (feature, state) ->
+                state == LanguageFeature.State.ENABLED_MANUALLY && feature.forcesPreReleaseBinariesIfEnabled()
+            }
+
     companion object {
         @JvmField
         val DEFAULT = LanguageVersionSettingsImpl(LanguageVersion.LATEST_STABLE, ApiVersion.LATEST_STABLE)
     }
 }
 
-fun LanguageVersionSettings.isPreRelease(): Boolean =
-    languageVersion.isPreRelease()
-
 fun LanguageVersion.isPreRelease(): Boolean {
     if (!isStable) return true
 
     return KotlinCompilerVersion.isPreRelease() && this == LanguageVersion.LATEST_STABLE
+}
+
+fun LanguageFeature.forcesPreReleaseBinariesIfEnabled(): Boolean {
+    val isFeatureNotReleasedYet = sinceVersion == null || sinceVersion > LanguageVersion.LATEST_STABLE
+    return isFeatureNotReleasedYet && advancesAbiVersion
 }
