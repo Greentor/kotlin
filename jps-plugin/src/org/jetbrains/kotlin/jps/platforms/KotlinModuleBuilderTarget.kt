@@ -12,10 +12,10 @@ import org.jetbrains.jps.builders.java.JavaSourceRootDescriptor
 import org.jetbrains.jps.incremental.CompileContext
 import org.jetbrains.jps.incremental.ModuleBuildTarget
 import org.jetbrains.jps.incremental.ProjectBuildException
-import org.jetbrains.jps.model.java.JavaSourceRootType
 import org.jetbrains.jps.model.java.JpsJavaClasspathKind
 import org.jetbrains.jps.model.java.JpsJavaExtensionService
 import org.jetbrains.jps.model.module.JpsModule
+import org.jetbrains.jps.model.module.JpsModuleSourceRootType
 import org.jetbrains.jps.util.JpsPathUtil
 import org.jetbrains.kotlin.cli.common.arguments.CommonCompilerArguments
 import org.jetbrains.kotlin.cli.common.messages.CompilerMessageSeverity
@@ -33,6 +33,8 @@ import java.io.File
  * Properties and actions for Kotlin test / production module build target.
  */
 abstract class KotlinModuleBuilderTarget(val context: CompileContext, val jpsModuleBuildTarget: ModuleBuildTarget) {
+    abstract val sourceRootType: JpsModuleSourceRootType<*>
+
     val module: JpsModule
         get() = jpsModuleBuildTarget.module
 
@@ -116,7 +118,6 @@ abstract class KotlinModuleBuilderTarget(val context: CompileContext, val jpsMod
             .getOrCreateCompilerConfiguration(module.project)
             .compilerExcludes
 
-        val sourceRootType = if (isTests) JavaSourceRootType.TEST_SOURCE else JavaSourceRootType.SOURCE
         module.getSourceRoots(sourceRootType).forEach {
             it.file.walkTopDown()
                 .onEnter { it !in moduleExcludes }

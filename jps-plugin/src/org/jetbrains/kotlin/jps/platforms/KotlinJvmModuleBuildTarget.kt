@@ -16,7 +16,9 @@ import org.jetbrains.jps.builders.DirtyFilesHolder
 import org.jetbrains.jps.builders.java.JavaSourceRootDescriptor
 import org.jetbrains.jps.incremental.CompileContext
 import org.jetbrains.jps.incremental.ModuleBuildTarget
+import org.jetbrains.jps.model.java.JavaSourceRootType
 import org.jetbrains.jps.model.java.JpsJavaExtensionService
+import org.jetbrains.jps.model.module.JpsModuleSourceRootType
 import org.jetbrains.jps.model.module.JpsSdkDependency
 import org.jetbrains.kotlin.build.JvmSourceRoot
 import org.jetbrains.kotlin.cli.common.arguments.CommonCompilerArguments
@@ -36,6 +38,9 @@ import java.io.IOException
 
 class KotlinJvmModuleBuildTarget(compileContext: CompileContext, jpsModuleBuildTarget: ModuleBuildTarget) :
     KotlinModuleBuilderTarget(compileContext, jpsModuleBuildTarget) {
+
+    override val sourceRootType: JpsModuleSourceRootType<*>
+        get() = if (isTests) JavaSourceRootType.TEST_SOURCE else JavaSourceRootType.SOURCE
 
     override fun compileModuleChunk(
         allCompiledFiles: MutableSet<File>,

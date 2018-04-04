@@ -13,10 +13,12 @@ import org.jetbrains.jps.incremental.CompileContext
 import org.jetbrains.jps.incremental.ModuleBuildTarget
 import org.jetbrains.jps.model.library.JpsOrderRootType
 import org.jetbrains.jps.model.module.JpsModule
+import org.jetbrains.jps.model.module.JpsModuleSourceRootType
 import org.jetbrains.jps.util.JpsPathUtil
 import org.jetbrains.kotlin.cli.common.arguments.CommonCompilerArguments
 import org.jetbrains.kotlin.compilerRunner.JpsCompilerEnvironment
 import org.jetbrains.kotlin.compilerRunner.JpsKotlinCompilerRunner
+import org.jetbrains.kotlin.config.KotlinSourceRootType
 import org.jetbrains.kotlin.jps.build.FSOperationsHelper
 import org.jetbrains.kotlin.jps.model.k2JsCompilerArguments
 import org.jetbrains.kotlin.jps.model.kotlinCompilerSettings
@@ -30,6 +32,9 @@ import java.net.URI
 
 class KotlinJsModuleBuildTarget(compileContext: CompileContext, jpsModuleBuildTarget: ModuleBuildTarget) :
     KotlinModuleBuilderTarget(compileContext, jpsModuleBuildTarget) {
+
+    override val sourceRootType: JpsModuleSourceRootType<*>
+        get() = if (isTests) KotlinSourceRootType.TestSource else KotlinSourceRootType.Source
 
     override fun compileModuleChunk(
         allCompiledFiles: MutableSet<File>,

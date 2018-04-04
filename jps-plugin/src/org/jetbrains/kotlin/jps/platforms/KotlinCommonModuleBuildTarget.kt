@@ -9,21 +9,26 @@ import com.intellij.util.containers.MultiMap
 import org.jetbrains.jps.ModuleChunk
 import org.jetbrains.jps.builders.DirtyFilesHolder
 import org.jetbrains.jps.builders.java.JavaSourceRootDescriptor
-import com.intellij.openapi.compiler.CompileContext as JpsCompileContext
 import org.jetbrains.jps.incremental.CompileContext
 import org.jetbrains.jps.incremental.FSOperations
 import org.jetbrains.jps.incremental.ModuleBuildTarget
 import org.jetbrains.jps.incremental.fs.CompilationRound
+import org.jetbrains.jps.model.module.JpsModuleSourceRootType
 import org.jetbrains.kotlin.cli.common.arguments.CommonCompilerArguments
 import org.jetbrains.kotlin.compilerRunner.JpsCompilerEnvironment
 import org.jetbrains.kotlin.compilerRunner.JpsKotlinCompilerRunner
+import org.jetbrains.kotlin.config.KotlinSourceRootType
 import org.jetbrains.kotlin.jps.build.FSOperationsHelper
 import org.jetbrains.kotlin.jps.model.k2MetadataCompilerArguments
 import org.jetbrains.kotlin.jps.model.kotlinCompilerSettings
 import java.io.File
+import com.intellij.openapi.compiler.CompileContext as JpsCompileContext
 
 class KotlinCommonModuleBuildTarget(compileContext: CompileContext, jpsModuleBuildTarget: ModuleBuildTarget) :
     KotlinModuleBuilderTarget(compileContext, jpsModuleBuildTarget) {
+
+    override val sourceRootType: JpsModuleSourceRootType<*>
+        get() = if (isTests) KotlinSourceRootType.TestSource else KotlinSourceRootType.Source
 
     override fun compileModuleChunk(
         allCompiledFiles: MutableSet<File>,
